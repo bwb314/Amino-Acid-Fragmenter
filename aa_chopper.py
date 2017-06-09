@@ -192,9 +192,12 @@ def chop():
         if 'ATOM' in lin: lig_ind += 1 
         if 'HETATM' not in lin: continue
         lignum = lin.split()[5]
+        ligchain = lin.split()[4]
+        if len(ligchain) > 1: lignum = ligchain[1:]
         ligtype = lin.split()[3]+ '_' + lignum
         coords = lin.split()[6:9]
         atom = lin.split()[-1]
+        print ligtype
         if '-' in atom: 
             charge = atom [-2]
             atom = atom[:-2]
