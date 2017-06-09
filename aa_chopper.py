@@ -197,7 +197,6 @@ def chop():
         ligtype = lin.split()[3]+ '_' + lignum
         coords = lin.split()[6:9]
         atom = lin.split()[-1]
-        print ligtype
         if '-' in atom: 
             charge = atom [-2]
             atom = atom[:-2]
@@ -236,7 +235,9 @@ def chop():
             entry = [ligands[i][0]]
             for j in ligands[i][1:]: entry.append(j)
             fC.append(entry)
-    
+    #ideally,
+    # protein, ligand, solvent = read_pdb()
+ 
     peptides = []
     for residue in pdb_fil:
         f_type = frag_type(residue) 
