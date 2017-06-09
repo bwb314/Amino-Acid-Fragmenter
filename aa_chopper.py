@@ -64,13 +64,13 @@ def frag_type(residue):
 def fA_stuffer(residue,f_type,fA):
     fA_entry = []
     if f_type == 'N_CAP':
-        name = residue[0][4]+'_NTC'
+        name = residue[0][3]+'_'+residue[0][4]+'_NTC'
     elif f_type == 'C_CAP':
-        name = residue[0][4]+'_CTC'
+        name = residue[0][3]+'_'+residue[0][4]+'_CTC'
     elif f_type == 'SIDECHAIN':
-        name = aa_dict[residue[0][2]]+residue[0][4]+'_SC'
+        name = residue[0][3]+'_'+aa_dict[residue[0][2]]+residue[0][4]+'_SC'
     else:
-        name = aa_dict[residue[0][2]]+residue[0][4]+'_FREE'
+        name = residue[0][3]+'_'+aa_dict[residue[0][2]]+residue[0][4]+'_FREE'
     fA_entry.append(name)
     for atom in residue: 
         if atom[1] not in ['C','O','N','H']: fA_entry.append(atom[0])
@@ -101,8 +101,8 @@ def peptide_stuffer(peptides,fA):
         if pep_atom[1] == 'C': num1 = pep_atom[4]
         if pep_atom[1] == 'N': 
             num2 = pep_atom[4]
-            if num1 == '': name = num2+'_NTC'
-            else: name = num1+'_'+num2+'_pept'
+            if num1 == '': name = pep_atom[3]+'_'+num2+'_NTC'
+            else: name = pep_atom[3]+'_'+num1+'_'+num2+'_pept'
             pep.insert(0,name)
             fA.append(pep)
             pep = []
