@@ -6,18 +6,6 @@ aa_dict = {'ALA': 'A' , 'ARG': 'R', 'ASN': 'N', 'ASP': 'D', 'CYS': 'C', 'GLU': '
 'Q', 'GLY': 'G', 'HIS': 'H', 'ILE': 'I', 'LEU': 'L', 'LYS': 'K', 'MET': 'M', 'PHE': 'F',
 'PRO': 'P', 'SER': 'S', 'THR': 'T', 'TRP': 'W', 'TYR': 'Y', 'VAL': 'V'}
 
-#this function only works if proposed filename has one period and one underscore 
-def pick_file_name(proposed_filename, filnames):
-    psplit = proposed_filename.split('.')
-    base = '_'.join(psplit[0].split('_')[:-1])
-    ext = psplit[1]
-    count = 0
-    for fil in filnames:
-        if fil == proposed_filename: 
-            count += 1
-    filename = base+'_'+str(count)+'.'+ext
-    return filename
-
 #color fragments based on fragmentation from bfs
 def color_frags(fA, single_color = ''):
     warm = []
