@@ -223,7 +223,7 @@ def chop():
                     residues[resname].append(new_arr)
                 continue
             peptide_name = list_last[0][4].split()[0]+'_'+nums[0].split()[0]+'_'+nums[1].split()[0]+'_PEPT'
-            peptide_frags[peptide_name] = last                 
+            peptide_frags[peptide_name] = last
 
     #residues = {}
     #ligand = []
@@ -233,7 +233,6 @@ def chop():
     segs = []
     seg = {}
     fA = []
-    #assumes sidechains are consecutively numbered
     #assumes that peptide bond type atoms form peptide bonds
     for pepind in range(len(sorted(peptide_frags.keys()))):
         pepkey = sorted(peptide_frags.keys())[pepind]
