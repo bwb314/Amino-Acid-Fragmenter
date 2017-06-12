@@ -14,5 +14,3 @@ This will produce:
 1) A colored fragmentation scheme along with fragment names
 2) A working input file with some sensible defaults
 3) fsapt/fA.dat and fsapt/fB.dat files for post-analysis
-
-

@@ -49,6 +49,69 @@ def color_frags(fA, single_color = ''):
 
 
 
+<<<<<<< HEAD
+=======
+def frag_type(residue):
+    is_n = False
+    is_c = False
+    for atom in residue:
+        atom_type = atom[1]
+        if atom_type == 'N': is_n = True
+        if atom_type == 'C': is_c = True
+    if is_n and is_c: return 'SIDECHAIN'
+    elif is_n: return 'C_CAP'
+    elif is_c: return 'N_CAP'
+    else: return 'ISOLATED'
+
+def fA_stuffer(residue,f_type,fA):
+    fA_entry = []
+    if f_type == 'N_CAP':
+        name = residue[0][3]+'_'+residue[0][4]+'_NTC'
+    elif f_type == 'C_CAP':
+        name = residue[0][3]+'_'+residue[0][4]+'_CTC'
+    elif f_type == 'SIDECHAIN':
+        name = residue[0][3]+'_'+aa_dict[residue[0][2]]+residue[0][4]+'_SC'
+    else:
+        name = residue[0][3]+'_'+aa_dict[residue[0][2]]+residue[0][4]+'_FREE'
+    fA_entry.append(name)
+    for atom in residue: 
+        if atom[1] not in ['C','O','N','H']: fA_entry.append(atom[0])
+    if len(fA_entry) == 1:
+        for atom in residue: fA_entry.append(atom[0])
+    fA.append(fA_entry)
+
+def gather_peptides(residue,peptides):
+    a_types = ['H','N','C','O']
+    pep = []
+    for atom in residue: 
+        if atom[1] in a_types: pep.append(atom)
+    #sort in for stitching
+    for atom in a_types:
+        for atom_s in pep:
+            if atom_s[1] == atom: peptides.append(atom_s)
+    
+def peptide_stuffer(peptides,fA):
+    #num_of_peps = len(peptides)/4
+    #for pep_ind in range(num_of_peps):
+    #    current_ind = pep_ind * 4
+    #    name = peptides[current_ind][4]+'_'+peptides[current_ind+2][4]+'_pept'
+    #    fA.append([name,peptides[current_ind][0],peptides[current_ind+1][0],peptides[current_ind+2][0],peptides[current_ind+3][0]])
+    pep = []
+    # take advantage of sortedness
+    for pep_atom in peptides:
+        pep.append(pep_atom[0]) 
+        if pep_atom[1] == 'C': num1 = pep_atom[4]
+        if pep_atom[1] == 'N': 
+            num2 = pep_atom[4]
+            if num1 == '': name = pep_atom[3]+'_'+num2+'_NTC'
+            else: name = pep_atom[3]+'_'+num1+'_'+num2+'_pept'
+            pep.insert(0,name)
+            fA.append(pep)
+            pep = []
+            num1 = ''
+            num2 = ''
+    
+>>>>>>> eb8c8491e20371c297f7b457b46bf685fd0e0db5
 def write_frag_file(fA,name):
     fil = open('fsapt/'+name+'.dat','w')
     for entry in fA:
@@ -57,8 +120,13 @@ def write_frag_file(fA,name):
         fil.write('\n')
     fil.close()
 
+<<<<<<< HEAD
 def write_input(protein,ligand, protein_charge, lig_charge, solvent, file_name):
     inp_fil = open(file_name.split('.')[0]+'.in','w')
+=======
+def write_input(protein,ligand, protein_charge, lig_charge, solvent, fil_name):
+    inp_fil = open(fil_name.split('.')[0]+'.in','w')
+>>>>>>> eb8c8491e20371c297f7b457b46bf685fd0e0db5
     # psi4 input file sections
     inp_fil.write('molecule {\n'+str(protein_charge)+' 1\n')
     for atom in protein: inp_fil.write(atom[0]+' '+' '.join(atom[1])+'\n')
@@ -81,6 +149,7 @@ set {
 }\n\nenergy('fisapt0')\n\n''')
     inp_fil.close()
 
+<<<<<<< HEAD
 def dist(a,b):
     a_coords = [float(x) for x in a[6].split()]
     b_coords = [float(x) for x in b[6].split()]
@@ -322,5 +391,123 @@ def chop():
 #        for reskey in sorted(residues.keys()):
 #            reschain = reskey[0]
 #            resnum = reskey[1:]
+=======
+def chop():
+    #READ PDB and LIGAND
+    fA = []
+    fil_name = cmd.get_names("all")[0]+'.pdb'
+    pdb_fil = []
+    residue = []
+    prevres = ''
+    ind = 0
+    protein_inp = []
+    protein_charge = 0
+    for lin in open(fil_name,'r'):
+        if 'ATOM' not in lin and prevres == '': continue
+        try:
+            a_type = lin.split()[2]
+            res_type = lin.split()[3]
+            chain_name = lin.split()[4]
+            res_num = lin.split()[5]
+            coords = lin.split()[6:9]
+            atom = lin.split()[-1]
+            if '-' in atom: 
+                charge = atom [-2]
+                atom = atom[:-2]
+                protein_charge -= int(charge)
+            if '+' in atom: 
+                charge = atom [-2]
+                atom = atom[:-2]
+                protein_charge += int(charge)
+            protein_inp.append([atom,coords])
+            if prevres == '': prevres = res_num
+        except: 
+            pdb_fil.append(residue)
+            prevres = ''
+            continue
+        atom = [ind,a_type,res_type,chain_name,res_num]
+        ind += 1
+        if res_num != prevres: 
+            pdb_fil.append(residue)
+            residue = []
+            prevres = res_num
+        residue.append(atom)
+    
+    ligands = {}
+    ligand_inp = []
+    lig_ind = 0
+    lig_charge = 0
+    solv_inp = []
+    #assumes one ligand at the moment
+    for lin in open(fil_name,'r'):
+        if 'ATOM' in lin: lig_ind += 1 
+        if 'HETATM' not in lin: continue
+        lignum = lin.split()[5]
+        ligchain = lin.split()[4]
+        if len(ligchain) > 1: lignum = ligchain[1:]
+        ligtype = lin.split()[3]+ '_' + lignum
+        coords = lin.split()[6:9]
+        atom = lin.split()[-1]
+        if '-' in atom: 
+            charge = atom [-2]
+            atom = atom[:-2]
+            lig_charge -= int(charge)
+        if '+' in atom: 
+            charge = atom [-2]
+            atom = atom[:-2]
+            lig_charge += int(charge)
+        if ligands == {}:
+            ligands[ligtype] = ['LIG_'+ligtype, lig_ind]
+            lig_ind += 1
+            ligand_inp.append([atom,coords])
+            continue
+        elif ligtype not in ligands:
+            ligands[ligtype] = ['SOLV_'+ligtype, lig_ind]
+            lig_ind += 1
+            solv_inp.append([atom,coords])
+            continue
+        if ligtype in ligands:
+            ligands[ligtype].append(lig_ind)
+            lig_ind += 1
+        if 'LIG' in ligands[ligtype][0]: 
+            ligand_inp.append([atom,coords])
+        else: 
+            solv_inp.append([atom,coords])
+    
+    fB = [[]]
+    for i in ligands.keys(): 
+        if not ligands[i][0].startswith('LIG'): continue
+        fB[0].append(ligands[i][0])
+        for j in ligands[i][1:]: fB[0].append(j)
+    fC = []
+    if len(ligands.keys()) > 1:
+        for i in ligands.keys():
+            if ligands[i][0].startswith('LIG'): continue
+            entry = [ligands[i][0]]
+            for j in ligands[i][1:]: entry.append(j)
+            fC.append(entry)
+    #ideally,
+    # protein, ligand, solvent = read_pdb()
+ 
+    peptides = []
+    for residue in pdb_fil:
+        f_type = frag_type(residue) 
+        fA_stuffer(residue,f_type,fA) 
+        gather_peptides(residue,peptides)
+    
+    #print peptides
+    peptide_stuffer(peptides,fA)
+    
+    color_frags(fA)
+    color_frags(fB, '[0.5,0.5,0.5]')
+    color_frags(fC, '[0.0,0.0,1.0]')
+    cmd.show('sticks')
+    cmd.label('all','elem')
+    try: os.mkdir('fsapt')
+    except: print '\n\nfsapt/ already exists. This will likely overwrite old fA.dat and fB.dat.\n\n'
+    write_frag_file(fA,'fA')
+    write_frag_file(fB,'fB')
+    write_input(protein_inp,ligand_inp, protein_charge, lig_charge, solv_inp, fil_name)
+>>>>>>> eb8c8491e20371c297f7b457b46bf685fd0e0db5
 
 cmd.extend("chop",chop)
