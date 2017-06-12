@@ -101,7 +101,7 @@ def intersect(frag,frags):
 def read_pdb(file_name):
     pdb_file = []
     for line in open(file_name,'r'):
-        if 'ATOM' not in line and 'HETATM' not in line: continue
+        if 'ATOM' != line[:4] and 'HETATM' != line[:6]: continue
         atom_class = line[:6].split()[0]
         #starting from 0
         atom_index = str(len(pdb_file))
