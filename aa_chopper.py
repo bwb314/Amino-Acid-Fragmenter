@@ -82,8 +82,8 @@ set {
     inp_fil.close()
 
 def dist(a,b):
-    a_coords = [float(x) for x in a[6].split()]
-    b_coords = [float(x) for x in b[6].split()]
+    a_coords = [float(x) for x in a['coords'].split()]
+    b_coords = [float(x) for x in b['coords'].split()]
     xdist = (a_coords[0]-b_coords[0])**2
     ydist = (a_coords[1]-b_coords[1])**2
     zdist = (a_coords[2]-b_coords[2])**2
@@ -99,7 +99,7 @@ cov_rad = {   'H' : 0.37, 'C' : 0.77, 'O' : 0.73, 'N' : 0.75, 'F' : 0.71,
   'Se': 1.17, 'Br': 1.14, 'Kr': 1.03}
 
 def bound(a,b):
-    if cov_rad[a[7]]+cov_rad[b[7]] >=  dist(a,b): return True
+    if cov_rad[a['element']]+cov_rad[b['element']] >=  dist(a,b): return True
     else: return False
 
 def intersect(frag,frags):
@@ -110,16 +110,8 @@ def intersect(frag,frags):
         frags.remove(f) 
     return intersects
 
-def str2list(string):
-    string = string.replace('[','')
-    string = string.replace(']','')
-    string = string.replace("'",'')
-    arr = string.split(',')
-    return arr
-
-def chop():
+def read_pdb(file_name):
     pdb_file = []
-    file_name = cmd.get_names("all")[0]+'.pdb'
     for line in open(file_name,'r'):
         if 'ATOM' not in line and 'HETATM' not in line: continue
         atom_class = line[:6].split()[0]
@@ -133,65 +125,16 @@ def chop():
         element = line[76:78].split()[0]
         try: charge = line[78:80].split()[0]
         except: charge = '0'
-        atom_info = [atom_class,atom_index,atom_type,residue_name,chain,residue_number,coords,element,charge]
-        #atom_info = [atom_class,atom_index,atom_type,residue_name,chain,residue_number,coords,element,charge]
-        #                   0         1          2       3            4     5               6    7      8
+        atom_info = {'atom_class':atom_class,'atom_index':atom_index,'atom_type':atom_type,'residue_name':residue_name,'chain':chain,'residue_number':residue_number,'coords':coords,'element':element,'charge':charge}
         pdb_file.append(atom_info)
-
-    peptides = []
-    residues = {}
-    ligand = []
-    solvent = {}
-    protein_charge = 0
-    ligand_charge = 0
-    protein_for_inp = []
-    ligand_for_inp = []
-    solvent_for_inp = []
-    for atom in pdb_file:
-        atom_class = atom[0]
-        atom_type = atom[2]
-        residue_number = atom[5]
-        chain = atom[4]
-        charge = atom[8]
-        element = atom[7]
-        coords = atom[6].split()
-        if atom_class == 'ATOM':
-            if atom_type in ['C','N','H','O']:
-                peptides.append(atom)
-            else:
-                res_id = chain+residue_number
-                if res_id in residues:
-                    residues[res_id].append(atom)
-                else: residues[res_id] = [atom]
-            if '-' in charge:
-                protein_charge -= int(charge.split('-')[0])
-            elif '+' in charge:
-                protein_charge += int(charge.split('+')[0])
-            protein_for_inp.append([element,coords])
-        else:
-            if ligand == []:
-                ligand_id = residue_number
-                ligand.append(atom)
-                ligand_for_inp.append([element,coords])
-            elif residue_number == ligand_id:
-                ligand.append(atom)
-                ligand_for_inp.append([element,coords])
-            else:
-                if residue_number in solvent:
-                    solvent[residue_number].append(atom)
-                    solvent_for_inp.append([element,coords])
-                else: 
-                    solvent[residue_number] = [atom]
-                    solvent_for_inp.append([element,coords])
-            #assumes only ligand can be charged
-            if '-' in charge:
-                ligand_charge -= int(charge.split('-')[0])
-            elif '+' in charge:
-                ligand_charge += int(charge.split('+')[0])
+  
+    return pdb_file
+    
+def bfs(peptides, residues):
+    translator = {}
+    for pep_dict in peptides: translator[str(pep_dict)] = pep_dict
 
     peptide_frags = {}
-
-
     minifrags = []
     #make sets of bonded atoms
     for i in range(len(peptides)):
@@ -205,34 +148,69 @@ def chop():
         while one != set([]):
             one = intersect(one,minifrags)
             if one != set([]): last = one
-        if last != []: 
-        #atom_info = [atom_class,atom_index,atom_type,residue_name,chain,residue_number,coords,element]
-        #                   0         1          2       3            4     5               6    7
-            list_last = [str2list(x) for x in list(last)]
-            nums = sorted(set([x[5] for x in list_last]))
+        if last != []:
+            ### converting strings to atom dicts instead
+            dict_last = [translator[x] for x in last]
+            nums = sorted(set([x['residue_number'] for x in dict_last]))
             if len(nums) == 1:
-                print 'Terminating peptide'
-                resname = list_last[0][4].split()[0] + list_last[0][5].split()[0]
-                for a in list_last:
-                    new_arr = []
-                    for entry in a:
-                        if entry == 'ATOM': 
-                            new_arr.append(entry)
-                        else:
-                            new_arr.append(entry[1:])
-                    residues[resname].append(new_arr)
+                print 'Detecting that terminating peptide is present.'
+                resname = dict_last[0]['chain'] + dict_last[0]['residue_number']
+                for a in dict_last: residues[resname].append(a)
                 continue
-            peptide_name = list_last[0][4].split()[0]+'_'+nums[0].split()[0]+'_'+nums[1].split()[0]+'_PEPT'
-            peptide_frags[peptide_name] = last
+            peptide_name = dict_last[0]['chain']+'_'+nums[0]+'_'+nums[1]+'_PEPT'
+            peptide_frags[peptide_name] = dict_last
+    
+    return peptide_frags
 
-    #residues = {}
-    #ligand = []
-    #solvent = {}
-    #peptide_frags = {}
-
+def interpret(pdb_file):
+    peptides = []
+    residues = {}
+    ligand = []
+    solvent = {}
+    protein_charge = 0
+    ligand_charge = 0
+    protein_for_inp = []
+    ligand_for_inp = []
+    solvent_for_inp = []
+    for atom in pdb_file:
+        if atom['atom_class'] == 'ATOM':
+            if atom['atom_type'] in ['C','N','H','O']:
+                peptides.append(atom)
+            else:
+                res_id = atom['chain']+atom['residue_number']
+                if res_id in residues:
+                    residues[res_id].append(atom)
+                else: residues[res_id] = [atom]
+            if '-' in atom['charge']:
+                protein_charge -= int(atom['charge'].split('-')[0])
+            elif '+' in atom['charge']:
+                protein_charge += int(atom['charge'].split('+')[0])
+            protein_for_inp.append([atom['element'],atom['coords'].split()])
+        else:
+            if ligand == []:
+                ligand_id = atom['residue_number']
+                ligand.append(atom)
+                ligand_for_inp.append([atom['element'],atom['coords'].split()])
+            elif atom['residue_number'] == ligand_id:
+                ligand.append(atom)
+                ligand_for_inp.append([atom['element'],atom['coords'].split()])
+            else:
+                if atom['residue_number'] in solvent:
+                    solvent[atom['residue_number']].append(atom)
+                    solvent_for_inp.append([atom['element'],atom['coords'].split()])
+                else: 
+                    solvent[atom['residue_number']] = [atom]
+                    solvent_for_inp.append([atom['element'],atom['coords'].split()])
+            if '-' in atom['charge']:
+                ligand_charge -= int(atom['charge'].split('-')[0])
+            elif '+' in atom['charge']:
+                ligand_charge += int(atom['charge'].split('+')[0])
+    
+    return residues, peptides, ligand, solvent, protein_charge, ligand_charge, protein_for_inp, ligand_for_inp, solvent_for_inp
+    
+def fragment(peptide_frags, residues, ligand, solvent, fA, fB, fC):
     segs = []
     seg = {}
-    fA = []
     #assumes that peptide bond type atoms form peptide bonds
     for pepind in range(len(sorted(peptide_frags.keys()))):
         pepkey = sorted(peptide_frags.keys())[pepind]
@@ -243,68 +221,71 @@ def chop():
         res2 = pepchain+pepnum2 
         if seg == {}:
             try: seg[res1+'_NTC'] = residues[res1]
-            except:
-                continue 
-                #print residues.keys()
-                #print res1,'not present'
-                #sys.exit()
-            entry = [x[1] for x in residues[res1]]
-            name = res1[0]+'_'+aa_dict[residues[res1][0][3]]+res1[1:]
+            except: continue 
+            entry = [x['atom_index'] for x in residues[res1]]
+            name = res1[0]+'_'+aa_dict[residues[res1][0]['residue_name']]+res1[1:]
             entry.insert(0,name+'_NTC')
             fA.append(entry) 
             del residues[res1]
         else: 
             seg[res1+'_SC'] = residues[res1]
-            entry = [x[1] for x in residues[res1]]
-            name = res1[0]+'_'+aa_dict[residues[res1][0][3]]+res1[1:]
+            entry = [x['atom_index'] for x in residues[res1]]
+            name = res1[0]+'_'+aa_dict[residues[res1][0]['residue_name']]+res1[1:]
             entry.insert(0,name+'_SC')
             fA.append(entry) 
             del residues[res1] 
         seg[pepkey] = peptide_frags[pepkey]
-        entry = [str2list(x)[1].split()[0] for x in list(peptide_frags[pepkey])]
+        entry = [x['atom_index'] for x in list(peptide_frags[pepkey])]
         entry.insert(0,pepkey)
         fA.append(entry) 
-        #del peptide_frags[pepkey]
         try: pepnum3 = sorted(peptide_frags.keys())[pepind+1].split('_')[2]
         except: pepnum3 = ''
         nextpept = pepchain+'_'+pepnum2+'_'+pepnum3+'_PEPT'
         if nextpept not in peptide_frags.keys():
             try: 
                 seg[res2+'_CTC'] = residues[res2]
-                entry = [x[1] for x in residues[res2]]
-                name = res2[0]+'_'+aa_dict[residues[res2][0][3]]+res2[1:]
+                entry = [x['atom_index'] for x in residues[res2]]
+                name = res2[0]+'_'+aa_dict[residues[res2][0]['residue_name']]+res2[1:]
                 entry.insert(0,name+'_CTC')
                 fA.append(entry) 
                 del residues[res2]
                 segs.append(seg)
                 seg = {}
             # assume terminal peptide
-            except:
-                continue 
+            except: continue 
    
     for free in sorted(residues.keys()):
-        entry = [x[1] for x in residues[free]]
-        name = free[0]+'_'+aa_dict[residues[free][0][3]]+free[1:]
+        entry = [x['atom_index'] for x in residues[free]]
+        name = free[0]+'_'+aa_dict[residues[free][0]['residue_name']]+free[1:]
         entry.insert(0,name+'_FREE')
         fA.append(entry)
         del residues[free]
-     
 
-    fB = []
     #assumes one ligand
-    entry = [x[1] for x in ligand]
-    name = 'LIG_'+ligand[0][3]+'_'+ligand[0][5]
+    entry = [x['atom_index'] for x in ligand]
+    name = 'LIG_'+ligand[0]['residue_name']+'_'+ligand[0]['residue_number']
     entry.insert(0,name)
     fB.append(entry)
 
     #assumes solvent goes in c
-    fC = []
     for solv in sorted(solvent.keys()):
-        entry = [x[1] for x in solvent[solv]]
-        name = 'SOLV_'+solvent[solv][0][3]+'_'+solvent[solv][0][5]
+        entry = [x['atom_index'] for x in solvent[solv]]
+        name = 'SOLV_'+solvent[solv][0]['residue_name']+'_'+solvent[solv][0]['residue_number']
         entry.insert(0,name)
         fC.append(entry) 
 
+def chop():
+   
+    file_name = cmd.get_names("all")[0]+'.pdb'
+    pdb_file = read_pdb(file_name) 
+
+    #assumes solvent does not carry charge
+    residues, peptides, ligand, solvent, protein_charge, ligand_charge, protein_for_inp, ligand_for_inp, solvent_for_inp = interpret(pdb_file)   
+ 
+    peptide_frags = bfs(peptides, residues)
+
+    fA, fB, fC = [], [], []
+    fragment(peptide_frags, residues, ligand, solvent, fA, fB, fC)
 
     cmd.show('sticks') 
     color_frags(fA) 
@@ -315,11 +296,5 @@ def chop():
     write_frag_file(fA,'fA')    
     write_frag_file(fB,'fB')
     write_input(protein_for_inp, ligand_for_inp, protein_charge, ligand_charge, solvent_for_inp, file_name)
-    
-    
-
-#        for reskey in sorted(residues.keys()):
-#            reschain = reskey[0]
-#            resnum = reskey[1:]
 
 cmd.extend("chop",chop)
