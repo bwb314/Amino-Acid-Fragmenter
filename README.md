@@ -14,3 +14,6 @@ This will produce:
 1) A colored fragmentation scheme along with fragment names
 2) A working input file with some sensible defaults
 3) fsapt/fA.dat and fsapt/fB.dat files for post-analysis
+
+Known Problems
+1) If atoms participating in peptide bonds do not have correct atom type, peptide bond will not be fragmented properly. (See tests/previously_failed_test.pdb) 
