@@ -21,7 +21,7 @@ Instructions:
             -Warning: it will overwrite any fA.dat or fB.dat files living in fsapt/ in the CWD
             -PDB file must have '.pdb' extension
             -Input file produced will have the same name as pdb, with extension '.in'
-            -Assumes ligand is its own fragment
+            -Assumes there is only one ligand, and it is its own fragment
             -Assumes solvent does not carry charge and belongs to monomer C
             -Assumes well-formed pdb supplied with correct atom types for atoms participating in peptide bond
             -Fragment names will be as follows:
