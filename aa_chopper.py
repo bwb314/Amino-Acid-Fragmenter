@@ -149,7 +149,6 @@ def bfs(peptides, residues):
             one = intersect(one,minifrags)
             if one != set([]): last = one
         if last != []:
-            ### converting strings to atom dicts instead
             dict_last = [translator[x] for x in last]
             nums = sorted(set([x['residue_number'] for x in dict_last]))
             if len(nums) == 1:
