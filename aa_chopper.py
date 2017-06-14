@@ -61,6 +61,7 @@ set {
   basis         jun-cc-pvdz
   df_basis_scf  jun-cc-pvdz-jkfit
   df_basis_sapt jun-cc-pvdz-ri
+  freeze_core   true
   scf_type df
   guess sad
   minao_basis cc-pvtz-minao
