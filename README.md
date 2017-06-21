@@ -8,7 +8,7 @@ output: Psi4 input file, fA.dat and fB.dat fragmentation files
 
 Instructions:
 
-    To use:
+    To use (in PyMOL):
     1)  Open pdb in PyMOL
     2)  Run aa_chopper.py in PyMOL (Note: this step can also be achieved by opening the script and .pdb 
         simultaneously, perhaps through aliasing)
@@ -27,8 +27,23 @@ Instructions:
             -Fragment names will be as follows:
                 N-terminus caps:    Chain_AminoAcidAbbreviation+ResidueNumber_NTC
                 C-terminus caps:    Chain_AminoAcidAbbreviation+ResidueNumber_CTC
+                Sidechain caps:     Chain_AminoAcidAbbreviation+ResidueNumber_CS
                 Sidechains:         Chain_AminoAcidAbbreviation+ResidueNumber_SC
                 Peptide bonds:      Chain_ResidueNumberOfAA1_ResidueNumberOfAA2_PEPT
                 Free Amino Acids:   Chain_AminoAcidAbbreviation+ResidueNumber_FREE
                 Ligand:             LIG_ResidueName_ResidueNumber
                 Solvent:            SOLV_ResidueName_ResidueNumber
+    4)  A PyMOL file named the same as the given PDB file, but with .pymol extension
+            -This will produce the same visualization as described above when opened with PyMOL
+            -This can be done by typing 'pymol -l NAME_OF_FILE.pymol'
+    
+    To use (in terminal):
+    1) Type 'python aa_chopper.py FILENAME.pdb'
+    
+    This will produce: 
+    1)  A working input file with some sensible defaults
+    2)  fsapt/fA.dat and fsapt/fB.dat files for post-analysis
+            -Named as described above
+    3)  A PyMOL file named the same as the given PDB file, but with .pymol extension
+            -This will produce the same visualization as described above when opened with PyMOL
+            -This can be done by typing 'pymol -l NAME_OF_FILE.pymol'

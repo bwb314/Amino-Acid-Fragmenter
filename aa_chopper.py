@@ -1,5 +1,7 @@
 import math, os, sys
-from pymol import cmd
+pymol = True
+try: from pymol import cmd
+except: pymol = False
 
 # Amino Acid dictionary
 aa_dict = {'ALA': 'A' , 'ARG': 'R', 'ASN': 'N', 'ASP': 'D', 'CYS': 'C', 'GLU': 'E', 'GLN':
@@ -7,7 +9,7 @@ aa_dict = {'ALA': 'A' , 'ARG': 'R', 'ASN': 'N', 'ASP': 'D', 'CYS': 'C', 'GLU': '
 'PRO': 'P', 'SER': 'S', 'THR': 'T', 'TRP': 'W', 'TYR': 'Y', 'VAL': 'V'}
 
 #color fragments based on fragmentation from bfs
-def color_frags(fA, single_color = ''):
+def color_frags(fA, pymol_file, single_color = ''):
     warm = []
     x = math.ceil((len(fA)/8.)**(1./3.))
     for li in range(int(2*x)):
@@ -24,18 +26,20 @@ def color_frags(fA, single_color = ''):
         selection = ''
         for atom in range(len(fA[frag][1:])):
             key = str(fA[frag][1+atom])
-            selection += 'rank '+key+' '                
-        cmd.select("("+fA[frag][0]+")", selection)
+            selection += 'rank '+key+' '         
         #linspace through color vector
         safefA = len(fA)
         if len(fA) != 1: safefA = len(fA) - 1
         fragind = int(math.floor(frag*((len(warm))-1)/safefA))
         if single_color == '': color = warm[fragind]
         else: color = single_color
-        cmd.set_color("A_"+fA[frag][0], color)
-        cmd.color("A_"+fA[frag][0],"("+fA[frag][0]+")")
-
-
+        pymol_file.write('cmd.select("('+fA[frag][0]+')", "'+selection+'")\n')
+        pymol_file.write('cmd.set_color("A_'+fA[frag][0]+'", '+str(color)+')\n')
+        pymol_file.write('cmd.color("A_'+fA[frag][0]+'","('+fA[frag][0]+')")\n')
+        if pymol: 
+            cmd.select("("+fA[frag][0]+")", selection)
+            cmd.set_color("A_"+fA[frag][0], color)
+            cmd.color("A_"+fA[frag][0],"("+fA[frag][0]+")")
 
 def write_frag_file(fA,name):
     fil = open('fsapt/'+name+'.dat','w')
@@ -212,7 +216,13 @@ def fragment(peptide_frags, residues, ligand, solvent, fA, fB, fC):
             except: continue 
             entry = [x['atom_index'] for x in residues[res1]]
             name = res1[0]+'_'+aa_dict[residues[res1][0]['residue_name']]+res1[1:]
-            entry.insert(0,name+'_NTC')
+            capname = name+'_NTC'
+            atoms = [x['element'] for x in residues[res1]]
+            #is cap a methyl group? If not capping sidechain
+            if atoms.count('C') != 1: capname = name+'_CS'
+            if atoms.count('H') != 3: capname = name+'_CS'
+            if len(atoms) != 4: capname = name+'_CS'
+            entry.insert(0,capname)
             fA.append(entry) 
             del residues[res1]
         else: 
@@ -234,7 +244,13 @@ def fragment(peptide_frags, residues, ligand, solvent, fA, fB, fC):
                 seg[res2+'_CTC'] = residues[res2]
                 entry = [x['atom_index'] for x in residues[res2]]
                 name = res2[0]+'_'+aa_dict[residues[res2][0]['residue_name']]+res2[1:]
-                entry.insert(0,name+'_CTC')
+                capname = name+'_NTC'
+                atoms = [x['element'] for x in residues[res2]]
+                #is cap a methyl group? If not capping sidechain
+                if atoms.count('C') != 1: capname = name+'_CS'
+                if atoms.count('H') != 3: capname = name+'_CS'
+                if len(atoms) != 4: capname = name+'_CS'
+                entry.insert(0,capname)
                 fA.append(entry) 
                 del residues[res2]
                 segs.append(seg)
@@ -249,12 +265,13 @@ def fragment(peptide_frags, residues, ligand, solvent, fA, fB, fC):
         fA.append(entry)
         del residues[free]
 
-    #assumes one ligand
+    #assumes one ligand residue type
     entry = [x['atom_index'] for x in ligand]
     name = 'LIG_'+ligand[0]['residue_name']+'_'+ligand[0]['residue_number']
     entry.insert(0,name)
     fB.append(entry)
 
+    #if different residue type than ligand is solvent
     #assumes solvent goes in c
     for solv in sorted(solvent.keys()):
         entry = [x['atom_index'] for x in solvent[solv]]
@@ -264,7 +281,15 @@ def fragment(peptide_frags, residues, ligand, solvent, fA, fB, fC):
 
 def chop():
    
-    file_name = cmd.get_names("all")[0]+'.pdb'
+    if pymol: 
+        file_name = cmd.get_names("all")[0]+'.pdb'
+        cmd.show('sticks') 
+    else: 
+        try: file_name = sys.argv[1]
+        except: 
+            print 'Must provide filename if running from terminal!'
+            sys.exit()
+
     pdb_file = read_pdb(file_name) 
 
     #assumes solvent does not carry charge
@@ -275,14 +300,19 @@ def chop():
     fA, fB, fC = [], [], []
     fragment(peptide_frags, residues, ligand, solvent, fA, fB, fC)
 
-    cmd.show('sticks') 
-    color_frags(fA) 
-    color_frags(fB, [0.5,0.5,0.5]) 
-    color_frags(fC, [0.0,0.0,1.0]) 
+    pymol_file = open(file_name.split('.pdb')[0]+'.pymol','w')
+    pymol_file.write("from pymol import cmd\n")
+    pymol_file.write("cmd.load('"+file_name+"')\n")
+    pymol_file.write("cmd.show('sticks')\n")
+    color_frags(fA, pymol_file) 
+    color_frags(fB, pymol_file, [0.5,0.5,0.5]) 
+    color_frags(fC, pymol_file, [0.0,0.0,1.0]) 
+    pymol_file.close()
     try: os.mkdir('fsapt/')
     except: print 'Overwriting old fA.dat and fB.dat'
     write_frag_file(fA,'fA')    
     write_frag_file(fB,'fB')
     write_input(protein_for_inp, ligand_for_inp, protein_charge, ligand_charge, solvent_for_inp, file_name)
 
-cmd.extend("chop",chop)
+if pymol: cmd.extend("chop",chop)
+else: chop()
