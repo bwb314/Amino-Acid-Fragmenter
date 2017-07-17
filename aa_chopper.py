@@ -49,14 +49,18 @@ def write_frag_file(fA,name):
         fil.write('\n')
     fil.close()
 
-def write_input(protein,ligand, protein_charge, lig_charge, solvent, file_name):
+def write_input(protein,ligand, protein_charge, lig_charge, solvent, file_name, solv_mon):
     inp_fil = open(file_name.split('.')[0]+'.in','w')
     # psi4 input file sections
     inp_fil.write('molecule {\n'+str(protein_charge)+' 1\n')
     for atom in protein: inp_fil.write(atom[0]+' '+' '.join(atom[1])+'\n')
+    if solv_mon.lower() == "a" and len(solvent) != 0:
+        for atom in solvent: inp_fil.write(atom[0]+' '+' '.join(atom[1])+'\n')
     inp_fil.write('--\n'+str(lig_charge)+' 1\n')
     for atom in ligand: inp_fil.write(atom[0]+' '+' '.join(atom[1])+'\n')
-    if len(solvent) != 0:
+    if solv_mon.lower() == "b" and len(solvent) != 0:
+        for atom in solvent: inp_fil.write(atom[0]+' '+' '.join(atom[1])+'\n')
+    if solv_mon.lower() == "c" and len(solvent) != 0:
         inp_fil.write('--\n0 1\n')
         for atom in solvent: inp_fil.write(atom[0]+' '+' '.join(atom[1])+'\n')
     inp_fil.write('''units angstrom\nno_com\nno_reorient\nsymmetry c1
@@ -200,7 +204,7 @@ def interpret(pdb_file):
     
     return residues, peptides, ligand, solvent, protein_charge, ligand_charge, protein_for_inp, ligand_for_inp, solvent_for_inp
     
-def fragment(peptide_frags, residues, ligand, solvent, fA, fB, fC):
+def fragment(peptide_frags, residues, ligand, solvent, fA, fB, fC, solv_mon):
     segs = []
     seg = {}
     #assumes that peptide bond type atoms form peptide bonds
@@ -271,22 +275,25 @@ def fragment(peptide_frags, residues, ligand, solvent, fA, fB, fC):
     entry.insert(0,name)
     fB.append(entry)
 
+    solv_keys = {'a':fA,'b':fB,'c':fC}
     #if different residue type than ligand is solvent
     #assumes solvent goes in c
-    for solv in sorted(solvent.keys()):
-        entry = [x['atom_index'] for x in solvent[solv]]
-        name = 'SOLV_'+solvent[solv][0]['residue_name']+'_'+solvent[solv][0]['residue_number']
+    for solv_mol in sorted(solvent.keys()):
+        entry = [x['atom_index'] for x in solvent[solv_mol]]
+        name = 'SOLV_'+solvent[solv_mol][0]['residue_name']+'_'+solvent[solv_mol][0]['residue_number']
         entry.insert(0,name)
-        fC.append(entry) 
+        solv_keys[solv_mon.lower()].append(entry) 
 
-def chop():
+def chop(solv_mon = 'a'):
    
     if pymol: 
         file_name = cmd.get_names("all")[0]+'.pdb'
         cmd.show('sticks') 
     else: 
-        try: file_name = sys.argv[1]
-        except: 
+        file_name = ""
+        for arg in sys.argv: 
+            if arg.endswith('.pdb'): file_name = arg
+        if file_name == "": 
             print 'Must provide filename if running from terminal!'
             sys.exit()
 
@@ -298,7 +305,7 @@ def chop():
     peptide_frags = bfs(peptides, residues)
 
     fA, fB, fC = [], [], []
-    fragment(peptide_frags, residues, ligand, solvent, fA, fB, fC)
+    fragment(peptide_frags, residues, ligand, solvent, fA, fB, fC, solv_mon)
 
     pymol_file = open(file_name.split('.pdb')[0]+'.pymol','w')
     pymol_file.write("from pymol import cmd\n")
@@ -312,7 +319,12 @@ def chop():
     except: print 'Overwriting old fA.dat and fB.dat'
     write_frag_file(fA,'fA')    
     write_frag_file(fB,'fB')
-    write_input(protein_for_inp, ligand_for_inp, protein_charge, ligand_charge, solvent_for_inp, file_name)
+    write_input(protein_for_inp, ligand_for_inp, protein_charge, ligand_charge, solvent_for_inp, file_name, solv_mon)
 
 if pymol: cmd.extend("chop",chop)
-else: chop()
+else: 
+    args = ' '.join(sys.argv)
+    if 'solv_mon' in args and '=' in args:
+        solv_choice = args.split('=')[1].split()[0].lower()
+    else: solv_choice = 'a'
+    chop(solv_mon=solv_choice)

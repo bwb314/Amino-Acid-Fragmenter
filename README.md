@@ -2,7 +2,7 @@ Amino Acid Fragmenter
 
 This script aims to fragment protein systems for the purposes of F-ISAPT Analysis. 
 
-input: well-formed pdb
+input: well-formed pdb, option for which monomer the solvent belongs to (default: solv_mon = "A")
 
 output: Psi4 input file, fA.dat and fB.dat fragmentation files
 
@@ -12,7 +12,7 @@ Instructions:
     1)  Open pdb in PyMOL
     2)  Run aa_chopper.py in PyMOL (Note: this step can also be achieved by opening the script and .pdb 
         simultaneously, perhaps through aliasing)
-    3)  Type 'chop'
+    3)  Type 'chop', or 'chop(solv_mon="C")' to put solvent in monomer C
     
     This will produce:
     1)  A colored fragmentation scheme along with fragment names
@@ -22,7 +22,7 @@ Instructions:
             -PDB file must have '.pdb' extension
             -Input file produced will have the same name as pdb, with extension '.in'
             -Assumes there is only one ligand, and it is its own fragment
-            -Assumes solvent does not carry charge and belongs to monomer C
+            -Assumes solvent does not carry charge and belongs to monomer A
             -Assumes well-formed pdb supplied with correct atom types for atoms participating in peptide bond
             -Fragment names will be as follows:
                 N-terminus caps:    Chain_AminoAcidAbbreviation+ResidueNumber_NTC
@@ -38,7 +38,8 @@ Instructions:
             -This can be done by typing 'pymol -l NAME_OF_FILE.pymol'
     
     To use (in terminal):
-    1) Type 'python aa_chopper.py FILENAME.pdb'
+    1) Type 'python aa_chopper.py FILENAME.pdb', or 'python aa_chopper.py solv_mon = "C" FILENAME.pdb' 
+       to put solvent in monomer C
     
     This will produce: 
     1)  A working input file with some sensible defaults
