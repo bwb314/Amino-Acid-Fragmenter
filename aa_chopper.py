@@ -269,17 +269,26 @@ def fragment(peptide_frags, residues, ligand, solvent, fA, fB, fC, solv_mon):
         fA.append(entry)
         del residues[free]
 
+    solv_offset = 0
+    len_solv = 0
+    if solv_mon.lower() == 'a':
+        solv_offset = len(ligand)
+        for solv in solvent: len_solv += len(solvent[solv])
+    
     #assumes one ligand residue type
-    entry = [x['atom_index'] for x in ligand]
+    entry = [str(int(x['atom_index']) + len_solv) for x in ligand]
     name = 'LIG_'+ligand[0]['residue_name']+'_'+ligand[0]['residue_number']
     entry.insert(0,name)
     fB.append(entry)
+    
+    #define how much solvent monomer choice offsets indexing in fB and fC
+    
 
     solv_keys = {'a':fA,'b':fB,'c':fC}
     #if different residue type than ligand is solvent
     #assumes solvent goes in c
     for solv_mol in sorted(solvent.keys()):
-        entry = [x['atom_index'] for x in solvent[solv_mol]]
+        entry = [str(int(x['atom_index']) - solv_offset) for x in solvent[solv_mol]]
         name = 'SOLV_'+solvent[solv_mol][0]['residue_name']+'_'+solvent[solv_mol][0]['residue_number']
         entry.insert(0,name)
         solv_keys[solv_mon.lower()].append(entry) 
@@ -315,11 +324,11 @@ def chop(solv_mon = 'a'):
     color_frags(fB, pymol_file, [0.5,0.5,0.5]) 
     color_frags(fC, pymol_file, [0.0,0.0,1.0]) 
     pymol_file.close()
+    write_input(protein_for_inp, ligand_for_inp, protein_charge, ligand_charge, solvent_for_inp, file_name, solv_mon)
     try: os.mkdir('fsapt/')
     except: print 'Overwriting old fA.dat and fB.dat'
     write_frag_file(fA,'fA')    
     write_frag_file(fB,'fB')
-    write_input(protein_for_inp, ligand_for_inp, protein_charge, ligand_charge, solvent_for_inp, file_name, solv_mon)
 
 if pymol: cmd.extend("chop",chop)
 else: 
