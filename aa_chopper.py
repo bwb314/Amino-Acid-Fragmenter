@@ -320,9 +320,26 @@ def chop(solv_mon = 'a'):
     pymol_file.write("from pymol import cmd\n")
     pymol_file.write("cmd.load('"+file_name+"')\n")
     pymol_file.write("cmd.show('sticks')\n")
-    color_frags(fA, pymol_file) 
-    color_frags(fB, pymol_file, [0.5,0.5,0.5]) 
-    color_frags(fC, pymol_file, [0.0,0.0,1.0]) 
+    if solv_mon.lower() == 'a':
+        fA_color = []
+        #because fB should only contain 1 ligand and first entry is name
+        solv_offset = len(fB[0][1:])
+        len_solv = 0
+        for frag in fA:
+            if 'SOLV_' in frag[0]:
+                len_solv += len(frag[1:]) 
+                new_frag = [str(int(x) + solv_offset) for x in frag[1:]]
+                new_frag.insert(0,frag[0])
+                fA_color.append(new_frag)
+            else: fA_color.append(frag)
+        color_frags(fA_color, pymol_file)
+        fB_color = [str(int(x) - len_solv) for x in fB[0][1:]]
+        fB_color.insert(0,fB[0][0])
+        color_frags([fB_color], pymol_file, [0.5,0.5,0.5])
+    else: 
+        color_frags(fA, pymol_file) 
+        color_frags(fB, pymol_file, [0.5,0.5,0.5]) 
+        color_frags(fC, pymol_file, [0.0,0.0,1.0]) 
     pymol_file.close()
     write_input(protein_for_inp, ligand_for_inp, protein_charge, ligand_charge, solvent_for_inp, file_name, solv_mon)
     try: os.mkdir('fsapt/')
